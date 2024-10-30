@@ -7,13 +7,19 @@ class Immich {
    * Make a request to Immich API. We're not using the SDK to limit
    * the possible attack surface of this app.
    */
-  async request (endpoint: string) {
+  async request (endpoint: string, range?: string) {
+    let headers: Record<string, string> = {
+      'x-api-key': process.env.API_KEY || '',
+    }
+
+    if (range)
+      headers['range'] = range;
+
     const res = await fetch(process.env.IMMICH_URL + '/api' + endpoint, {
-      headers: {
-        'x-api-key': process.env.API_KEY || ''
-      }
+      headers: headers,
     })
-    if (res.status === 200) {
+
+    if (res.status === 200 || res.status === 206) {
       const contentType = res.headers.get('Content-Type') || ''
       if (contentType.includes('application/json')) {
         return res.json()
@@ -51,13 +57,13 @@ class Immich {
    * For photos, you can request 'thumbnail' or 'original' size.
    * For videos, it is Immich's streaming quality, not the original quality.
    */
-  async getAssetBuffer (asset: Asset, size?: ImageSize) {
+  async getAssetBuffer (asset: Asset, {size, range}: { size?: ImageSize; range?: string } = {}) {
     switch (asset.type) {
       case AssetType.image:
         size = size === ImageSize.thumbnail ? ImageSize.thumbnail : ImageSize.original
-        return this.request('/assets/' + encodeURIComponent(asset.id) + '/' + size + '?key=' + encodeURIComponent(asset.key))
+        return this.request('/assets/' + encodeURIComponent(asset.id) + '/' + size + '?key=' + encodeURIComponent(asset.key), range)
       case AssetType.video:
-        return this.request('/assets/' + encodeURIComponent(asset.id) + '/video/playback?key=' + encodeURIComponent(asset.key))
+        return this.request('/assets/' + encodeURIComponent(asset.id) + '/video/playback?key=' + encodeURIComponent(asset.key), range)
     }
   }
 

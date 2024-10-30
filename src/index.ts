@@ -33,15 +33,15 @@ app.get('/share/:key', async (req, res) => {
       const asset = sharedLink.assets[0]
       if (asset.type === AssetType.image) {
         // For photos, output the image directly
-        await render.assetBuffer(res, sharedLink.assets[0], getSize(req))
+        await render.assetBuffer(res, sharedLink.assets[0], {size: getSize(req)})
       } else if (asset.type === AssetType.video) {
         // For videos, show the video as a web player
-        await render.gallery(res, sharedLink, 1)
+        await render.gallery(req, res, sharedLink, 1)
       }
     } else {
       // Multiple images - render as a gallery
       log('Serving link ' + req.params.key)
-      await render.gallery(res, sharedLink)
+      await render.gallery(req, res, sharedLink)
     }
   }
 })
@@ -58,7 +58,7 @@ app.get('/:type(photo|video)/:key/:id', async (req, res) => {
       const asset = sharedLink.assets.find(x => x.id === req.params.id)
       if (asset) {
         asset.type = req.params.type === 'video' ? AssetType.video : AssetType.image
-        render.assetBuffer(res, asset, getSize(req)).then()
+        render.assetBuffer(res, asset, { size: getSize(req), range: req.get('Range')}).then()
         return
       }
     }
